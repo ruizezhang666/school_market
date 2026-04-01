@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>校园二手平台</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<div class="bg-orb orb1"></div>
+<div class="bg-orb orb2"></div>
+
+<header class="header">
+    <div class="header-inner">
+        <div class="logo">
+            <span>🎓</span>
+            <div>
+                <div class="logo-title">校园二手平台</div>
+                <div class="logo-sub">Campus Market</div>
+            </div>
+        </div>
+        <nav class="nav-tabs">
+            <button class="nav-btn active" onclick="showSection('all',event)">全部</button>
+            <button class="nav-btn" onclick="showSection('sell',event)">出售</button>
+            <button class="nav-btn" onclick="showSection('buy',event)">求购</button>
+        </nav>
+        <button class="publish-btn" onclick="openModal('sell-modal')">+ 发布</button>
+    </div>
+</header>
+
+<section class="stats-bar">
+    <div class="stat-item">
+        <span class="stat-num">{{ sell_count }}</span>
+        <span class="stat-label">在售</span>
+    </div>
+    <div class="stat-divider"></div>
+    <div class="stat-item">
+        <span class="stat-num">{{ buy_count }}</span>
+        <span class="stat-label">求购</span>
+    </div>
+    <div class="stat-divider"></div>
+    <div class="stat-item">
+        <span class="stat-num">{{ sold_count }}</span>
+        <span class="stat-label">已成交</span>
+    </div>
+</section>
+
+<div class="search-bar">
+    <form action="/" method="get" class="search-form">
+        <input name="q" value="{{ keyword }}" placeholder="🔎 搜索商品名称..." class="search-input">
+        <button type="submit" class="search-btn">搜索</button>
+        {% if keyword %}
+        <a href="/" class="clear-btn">清除</a>
+        {% endif %}
+    </form>
+</div>
+
+<main class="main">
+{% if items %}
+<div class="grid" id="item-grid">
+{% for item in items %}
+<div class="card {% if item.type=='buy' %}card-buy{% endif %} {% if item.sold %}card-sold{% endif %}"
+     data-type="{{ item.type }}" onclick="addView('{{ item.id }}')">
+
+{% if item.type == 'sell' %}
+    <div class="card-header">
+        {% if item.img %}
+        <div class="card-img-wrap">
+            <img src="{{ item.img }}" class="card-img"
+                 onerror="this.parentElement.innerHTML='<div class=img-placeholder>📦</div>'">
+        </div>
+        {% else %}
+        <div class="img-placeholder">📦</div>
+        {% endif %}
+        {% if item.sold %}<div class="sold-badge">已售出</div>{% endif %}
+        {% if item.category %}<div class="category-tag">{{ item.category }}</div>{% endif %}
+    </div>
+    <div class="card-body">
+        <h3 class="item-name">{{ item.name }}</h3>
+        {% if item.description %}<p class="item-desc">{{ item.description }}</p>{% endif %}
+        <div class="item-price">¥{{ item.price }}</div>
+        <div class="item-meta">
+            <span>🎓 {{ item.student_id }}</span>
+            {% if item.contact %}<span>💬 {{ item.contact }}</span>{% endif %}
+            {% if item.time %}<span>🕐 {{ item.time }}</span>{% endif %}
+            <span>👁 {{ item.views or 0 }} 次浏览</span>
+        </div>
+        <div class="card-actions">
+            {% if not item.sold %}
+            <button class="btn btn-success"
+                onclick="event.stopPropagation();verifyAndSold('{{ item.id }}')">✓ 标记卖出</button>
+            {% else %}
+            <span class="btn btn-disabled">已售出</span>
+            {% endif %}
+            <button class="btn btn-danger"
+                onclick="event.stopPropagation();verifyAndDelete('{{ item.id }}')">删除</button>
+        </div>
+    </div>
+
+{% elif item.type == 'buy' %}
+    <div class="buy-icon">🔍</div>
+    <div class="card-body">
+        <div class="buy-label">求购</div>
+        <h3 class="item-name">{{ item.name }}</h3>
+        {% if item.description %}<p class="item-desc">{{ item.description }}</p>{% endif %}
+        <div class="item-price budget">预算 ¥{{ item.price }}</div>
+        <div class="item-meta">
+            <span>🎓 {{ item.student_id }}</span>
+            {% if item.contact %}<span>💬 {{ item.contact }}</span>{% endif %}
+            {% if item.time %}<span>🕐 {{ item.time }}</span>{% endif %}
+            <span>👁 {{ item.views or 0 }} 次浏览</span>
+        </div>
+        <div class="card-actions">
+            <button class="btn btn-danger"
+                onclick="event.stopPropagation();verifyAndDelete('{{ item.id }}')">删除</button>
+        </div>
+    </div>
+{% endif %}
+</div>
+{% endfor %}
+</div>
+{% else %}
+<div class="empty-state">
+    <div style="font-size:64px">🏪</div>
+    <h2>{% if keyword %}没有找到"{{ keyword }}"{% else %}暂无信息{% endif %}</h2>
+    <p>{% if keyword %}换个关键词试试{% else %}成为第一个发布的人吧！{% endif %}</p>
+    {% if not keyword %}
+    <button class="publish-btn" onclick="openModal('sell-modal')">+ 发布出售</button>
+    {% endif %}
+</div>
+{% endif %}
+</main>
+
+<div class="fab-group">
+    <button class="fab fab-buy" onclick="openModal('buy-modal')">🔍</button>
+    <button class="fab fab-sell" onclick="openModal('sell-modal')">📦</button>
+</div>
+
+<!-- 学号验证弹窗 -->
+<div class="modal-overlay" id="verify-modal" onclick="closeOnOverlay(event,'verify-modal')">
+    <div class="modal" style="max-width:360px">
+        <div class="modal-header">
+            <h2 id="verify-title">🔐 身份验证</h2>
+            <button class="modal-close" onclick="closeModal('verify-modal')">×</button>
+        </div>
+        <div class="modal-form">
+            <div class="form-row">
+                <label>请输入你发布时的学号</label>
+                <input id="verify-input" placeholder="输入学号" type="text">
+            </div>
+            <div id="verify-error" style="color:#e17055;font-size:13px;display:none">
+                学号错误，无权操作
+            </div>
+            <button class="submit-btn" onclick="doVerify()">确认</button>
+        </div>
+    </div>
+</div>
+
+<!-- 发布出售弹窗 -->
+<div class="modal-overlay" id="sell-modal" onclick="closeOnOverlay(event,'sell-modal')">
+    <div class="modal">
+        <div class="modal-header">
+            <h2>📦 发布出售</h2>
+            <button class="modal-close" onclick="closeModal('sell-modal')">×</button>
+        </div>
+        <form action="/add_sell" method="post" class="modal-form">
+            <div class="form-row">
+                <label>商品名称 *</label>
+                <input name="name" placeholder="例：九成新教材" required>
+            </div>
+            <div class="form-row">
+                <label>分类</label>
+                <select name="category">
+                    <option value="数码电子">📱 数码电子</option>
+                    <option value="教材书籍">📚 教材书籍</option>
+                    <option value="生活用品">🏠 生活用品</option>
+                    <option value="服装鞋包">👕 服装鞋包</option>
+                    <option value="运动器材">⚽ 运动器材</option>
+                    <option value="其他">📦 其他</option>
+                </select>
+            </div>
+            <div class="form-row">
+                <label>价格（元）*</label>
+                <input name="price" type="number" placeholder="0" min="0" required>
+            </div>
+            <div class="form-row">
+                <label>商品描述</label>
+                <textarea name="description" placeholder="描述成色、购入时间等..."></textarea>
+            </div>
+            <div class="form-row">
+                <label>图片链接（可选）</label>
+                <input name="img" placeholder="粘贴图片URL">
+            </div>
+            <div class="form-row">
+                <label>联系方式（微信/QQ）</label>
+                <input name="contact" placeholder="例：微信 zhang123">
+            </div>
+            <div class="form-row">
+                <label>学号 *（删除和标记卖出时需要验证）</label>
+                <input name="student_id" placeholder="输入你的学号" required>
+            </div>
+            <button type="submit" class="submit-btn">🚀 立即发布</button>
+        </form>
+    </div>
+</div>
+
+<!-- 发布求购弹窗 -->
+<div class="modal-overlay" id="buy-modal" onclick="closeOnOverlay(event,'buy-modal')">
+    <div class="modal">
+        <div class="modal-header">
+            <h2>🔍 发布求购</h2>
+            <button class="modal-close" onclick="closeModal('buy-modal')">×</button>
+        </div>
+        <form action="/add_buy" method="post" class="modal-form">
+            <div class="form-row">
+                <label>想要的商品 *</label>
+                <input name="name" placeholder="例：大学物理教材下册" required>
+            </div>
+            <div class="form-row">
+                <label>预算（元）*</label>
+                <input name="price" type="number" placeholder="0" min="0" required>
+            </div>
+            <div class="form-row">
+                <label>补充说明</label>
+                <textarea name="description" placeholder="版本、成色要求等..."></textarea>
+            </div>
+            <div class="form-row">
+                <label>联系方式（微信/QQ）</label>
+                <input name="contact" placeholder="例：QQ 123456789">
+            </div>
+            <div class="form-row">
+                <label>学号 *（删除时需要验证）</label>
+                <input name="student_id" placeholder="输入你的学号" required>
+            </div>
+            <button type="submit" class="submit-btn">🚀 发布求购</button>
+        </form>
+    </div>
+</div>
+
+<script>
+function openModal(id) {
+    document.getElementById(id).classList.add('active');
+    document.body.style.overflow = 'hidden';
+}
+function closeModal(id) {
+    document.getElementById(id).classList.remove('active');
+    document.body.style.overflow = '';
+}
+function closeOnOverlay(e, id) {
+    if (e.target.classList.contains('modal-overlay')) closeModal(id);
+}
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        document.querySelectorAll('.modal-overlay.active').forEach(function(m) {
+            closeModal(m.id);
+        });
+    }
+});
+function showSection(type, event) {
+    document.querySelectorAll('.nav-btn').forEach(function(b) { b.classList.remove('active'); });
+    event.target.classList.add('active');
+    document.querySelectorAll('.card').forEach(function(card) {
+        card.style.display = (type === 'all' || card.dataset.type === type) ? '' : 'none';
+    });
+}
+function addView(id) {
+    fetch('/view/' + id);
+}
+var verifyAction = null;
+function verifyAndDelete(id) {
+    verifyAction = {type: 'delete', id: id};
+    document.getElementById('verify-title').innerText = '🔐 验证身份 · 删除';
+    document.getElementById('verify-input').value = '';
+    document.getElementById('verify-error').style.display = 'none';
+    openModal('verify-modal');
+}
+function verifyAndSold(id) {
+    verifyAction = {type: 'sold', id: id};
+    document.getElementById('verify-title').innerText = '🔐 验证身份 · 标记卖出';
+    document.getElementById('verify-input').value = '';
+    document.getElementById('verify-error').style.display = 'none';
+    openModal('verify-modal');
+}
+function doVerify() {
+    var studentId = document.getElementById('verify-input').value.trim();
+    if (!studentId) return;
+    var url = '/' + verifyAction.type + '/' + verifyAction.id;
+    var form = new FormData();
+    form.append('student_id', studentId);
+    fetch(url, {method: 'POST', body: form})
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            if (data.success) {
+                closeModal('verify-modal');
+                location.reload();
+            } else {
+                document.getElementById('verify-error').style.display = 'block';
+            }
+        });
+}
+</script>
+</body>
+</html>
