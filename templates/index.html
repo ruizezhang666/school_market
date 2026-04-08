@@ -7,16 +7,14 @@
     <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
-<div class="bg-orb orb1"></div>
-<div class="bg-orb orb2"></div>
 
 <header class="header">
     <div class="header-inner">
         <div class="logo">
-            <span>🎓</span>
+            <span class="logo-icon">⇄</span>
             <div>
                 <div class="logo-title">校园二手平台</div>
-                <div class="logo-sub">Campus Market</div>
+                <div class="logo-sub">Campus Second-Hand Market</div>
             </div>
         </div>
         <nav class="nav-tabs">
@@ -24,30 +22,30 @@
             <button class="nav-btn" onclick="showSection('sell',event)">出售</button>
             <button class="nav-btn" onclick="showSection('buy',event)">求购</button>
         </nav>
-        <button class="publish-btn" onclick="openModal('sell-modal')">+ 发布</button>
+        <button class="publish-btn" onclick="openModal('sell-modal')">+ 发布信息</button>
     </div>
 </header>
 
-<section class="stats-bar">
+<div class="stats-bar">
     <div class="stat-item">
         <span class="stat-num">{{ sell_count }}</span>
-        <span class="stat-label">在售</span>
+        <span class="stat-label">在售商品</span>
     </div>
     <div class="stat-divider"></div>
     <div class="stat-item">
         <span class="stat-num">{{ buy_count }}</span>
-        <span class="stat-label">求购</span>
+        <span class="stat-label">求购信息</span>
     </div>
     <div class="stat-divider"></div>
     <div class="stat-item">
         <span class="stat-num">{{ sold_count }}</span>
         <span class="stat-label">已成交</span>
     </div>
-</section>
+</div>
 
-<div class="search-bar">
+<div class="search-wrap">
     <form action="/" method="get" class="search-form">
-        <input name="q" value="{{ keyword }}" placeholder="🔎 搜索商品名称..." class="search-input">
+        <input name="q" value="{{ keyword }}" placeholder="搜索商品名称..." class="search-input">
         <button type="submit" class="search-btn">搜索</button>
         {% if keyword %}
         <a href="/" class="clear-btn">清除</a>
@@ -57,62 +55,76 @@
 
 <main class="main">
 {% if items %}
-<div class="grid" id="item-grid">
+<div class="grid">
 {% for item in items %}
 <div class="card {% if item.type=='buy' %}card-buy{% endif %} {% if item.sold %}card-sold{% endif %}"
-     data-type="{{ item.type }}" onclick="addView('{{ item.id }}')">
+     data-type="{{ item.type }}">
 
 {% if item.type == 'sell' %}
-    <div class="card-header">
-        {% if item.img %}
-        <div class="card-img-wrap">
-            <img src="{{ item.img }}" class="card-img"
-                 onerror="this.parentElement.innerHTML='<div class=img-placeholder>📦</div>'">
-        </div>
-        {% else %}
-        <div class="img-placeholder">📦</div>
-        {% endif %}
+    {% if item.img %}
+    <div class="card-img-wrap">
+        <img src="{{ item.img }}" class="card-img"
+             onerror="this.parentElement.style.display='none'">
         {% if item.sold %}<div class="sold-badge">已售出</div>{% endif %}
         {% if item.category %}<div class="category-tag">{{ item.category }}</div>{% endif %}
     </div>
+    {% else %}
+    <div class="no-img">
+        <span>📦</span>
+        {% if item.category %}<div class="category-tag" style="position:relative;top:auto;left:auto;margin-top:8px">{{ item.category }}</div>{% endif %}
+    </div>
+    {% endif %}
     <div class="card-body">
-        <h3 class="item-name">{{ item.name }}</h3>
-        {% if item.description %}<p class="item-desc">{{ item.description }}</p>{% endif %}
-        <div class="item-price">¥{{ item.price }}</div>
-        <div class="item-meta">
-            <span>🎓 {{ item.student_id }}</span>
-            {% if item.contact %}<span>💬 {{ item.contact }}</span>{% endif %}
-            {% if item.time %}<span>🕐 {{ item.time }}</span>{% endif %}
-            <span>👁 {{ item.views or 0 }} 次浏览</span>
+        <div class="card-top">
+            <h3 class="item-name">{{ item.name }}</h3>
+            {% if item.sold %}<span class="sold-text">已售出</span>{% endif %}
         </div>
+        {% if item.description %}<p class="item-desc">{{ item.description }}</p>{% endif %}
+        <div class="item-price">¥ {{ item.price }}</div>
+        <div class="item-meta">
+            <span>学号：{{ item.student_id }}</span>
+            <span>{{ item.time }}</span>
+        </div>
+        {% if item.contact %}
+        <div class="contact-bar">
+            <span class="contact-label">联系方式</span>
+            <span class="contact-val">{{ item.contact }}</span>
+            <button class="contact-btn" onclick="copyContact('{{ item.contact }}',this)">复制</button>
+        </div>
+        {% endif %}
+        <div class="views-bar">👁 {{ item.views or 0 }} 次浏览</div>
         <div class="card-actions">
             {% if not item.sold %}
-            <button class="btn btn-success"
-                onclick="event.stopPropagation();verifyAndSold('{{ item.id }}')">✓ 标记卖出</button>
+            <button class="btn btn-primary" onclick="verifyAndSold('{{ item.id }}')">标记卖出</button>
             {% else %}
             <span class="btn btn-disabled">已售出</span>
             {% endif %}
-            <button class="btn btn-danger"
-                onclick="event.stopPropagation();verifyAndDelete('{{ item.id }}')">删除</button>
+            <button class="btn btn-danger" onclick="verifyAndDelete('{{ item.id }}')">删除</button>
         </div>
     </div>
 
 {% elif item.type == 'buy' %}
-    <div class="buy-icon">🔍</div>
     <div class="card-body">
-        <div class="buy-label">求购</div>
+        <div class="buy-header">
+            <span class="buy-badge">求购</span>
+        </div>
         <h3 class="item-name">{{ item.name }}</h3>
         {% if item.description %}<p class="item-desc">{{ item.description }}</p>{% endif %}
-        <div class="item-price budget">预算 ¥{{ item.price }}</div>
+        <div class="item-price blue">预算 ¥ {{ item.price }}</div>
         <div class="item-meta">
-            <span>🎓 {{ item.student_id }}</span>
-            {% if item.contact %}<span>💬 {{ item.contact }}</span>{% endif %}
-            {% if item.time %}<span>🕐 {{ item.time }}</span>{% endif %}
-            <span>👁 {{ item.views or 0 }} 次浏览</span>
+            <span>学号：{{ item.student_id }}</span>
+            <span>{{ item.time }}</span>
         </div>
+        {% if item.contact %}
+        <div class="contact-bar">
+            <span class="contact-label">联系方式</span>
+            <span class="contact-val">{{ item.contact }}</span>
+            <button class="contact-btn" onclick="copyContact('{{ item.contact }}',this)">复制</button>
+        </div>
+        {% endif %}
+        <div class="views-bar">👁 {{ item.views or 0 }} 次浏览</div>
         <div class="card-actions">
-            <button class="btn btn-danger"
-                onclick="event.stopPropagation();verifyAndDelete('{{ item.id }}')">删除</button>
+            <button class="btn btn-danger" onclick="verifyAndDelete('{{ item.id }}')">删除</button>
         </div>
     </div>
 {% endif %}
@@ -121,9 +133,9 @@
 </div>
 {% else %}
 <div class="empty-state">
-    <div style="font-size:64px">🏪</div>
-    <h2>{% if keyword %}没有找到"{{ keyword }}"{% else %}暂无信息{% endif %}</h2>
-    <p>{% if keyword %}换个关键词试试{% else %}成为第一个发布的人吧！{% endif %}</p>
+    <div class="empty-icon">🏪</div>
+    <h2>{% if keyword %}未找到"{{ keyword }}"{% else %}暂无信息{% endif %}</h2>
+    <p>{% if keyword %}请换个关键词试试{% else %}成为第一个发布的人吧{% endif %}</p>
     {% if not keyword %}
     <button class="publish-btn" onclick="openModal('sell-modal')">+ 发布出售</button>
     {% endif %}
@@ -132,25 +144,23 @@
 </main>
 
 <div class="fab-group">
-    <button class="fab fab-buy" onclick="openModal('buy-modal')">🔍</button>
-    <button class="fab fab-sell" onclick="openModal('sell-modal')">📦</button>
+    <button class="fab fab-buy" onclick="openModal('buy-modal')" title="发布求购">求购</button>
+    <button class="fab fab-sell" onclick="openModal('sell-modal')" title="发布出售">出售</button>
 </div>
 
-<!-- 学号验证弹窗 -->
+<!-- 密码验证弹窗 -->
 <div class="modal-overlay" id="verify-modal" onclick="closeOnOverlay(event,'verify-modal')">
-    <div class="modal" style="max-width:360px">
+    <div class="modal" style="max-width:380px">
         <div class="modal-header">
-            <h2 id="verify-title">🔐 身份验证</h2>
+            <h2 id="verify-title">身份验证</h2>
             <button class="modal-close" onclick="closeModal('verify-modal')">×</button>
         </div>
         <div class="modal-form">
             <div class="form-row">
-                <label>请输入你发布时的学号</label>
-                <input id="verify-input" placeholder="输入学号" type="text">
+                <label>请输入发布时设置的密码</label>
+                <input id="verify-input" type="password" placeholder="输入密码">
             </div>
-            <div id="verify-error" style="color:#e17055;font-size:13px;display:none">
-                学号错误，无权操作
-            </div>
+            <div id="verify-error" class="error-tip">密码错误，无权操作</div>
             <button class="submit-btn" onclick="doVerify()">确认</button>
         </div>
     </div>
@@ -160,23 +170,23 @@
 <div class="modal-overlay" id="sell-modal" onclick="closeOnOverlay(event,'sell-modal')">
     <div class="modal">
         <div class="modal-header">
-            <h2>📦 发布出售</h2>
+            <h2>发布出售</h2>
             <button class="modal-close" onclick="closeModal('sell-modal')">×</button>
         </div>
         <form action="/add_sell" method="post" class="modal-form">
             <div class="form-row">
                 <label>商品名称 *</label>
-                <input name="name" placeholder="例：九成新教材" required>
+                <input name="name" placeholder="例：九成新线性代数教材" required>
             </div>
             <div class="form-row">
                 <label>分类</label>
                 <select name="category">
-                    <option value="数码电子">📱 数码电子</option>
-                    <option value="教材书籍">📚 教材书籍</option>
-                    <option value="生活用品">🏠 生活用品</option>
-                    <option value="服装鞋包">👕 服装鞋包</option>
-                    <option value="运动器材">⚽ 运动器材</option>
-                    <option value="其他">📦 其他</option>
+                    <option value="数码电子">数码电子</option>
+                    <option value="教材书籍">教材书籍</option>
+                    <option value="生活用品">生活用品</option>
+                    <option value="服装鞋包">服装鞋包</option>
+                    <option value="运动器材">运动器材</option>
+                    <option value="其他">其他</option>
                 </select>
             </div>
             <div class="form-row">
@@ -185,21 +195,25 @@
             </div>
             <div class="form-row">
                 <label>商品描述</label>
-                <textarea name="description" placeholder="描述成色、购入时间等..."></textarea>
+                <textarea name="description" placeholder="成色、购入时间、备注等..."></textarea>
             </div>
             <div class="form-row">
                 <label>图片链接（可选）</label>
                 <input name="img" placeholder="粘贴图片URL">
             </div>
             <div class="form-row">
-                <label>联系方式（微信/QQ）</label>
+                <label>联系方式（微信 / QQ）</label>
                 <input name="contact" placeholder="例：微信 zhang123">
             </div>
             <div class="form-row">
-                <label>学号 *（删除和标记卖出时需要验证）</label>
-                <input name="student_id" placeholder="输入你的学号" required>
+                <label>学号 *</label>
+                <input name="student_id" placeholder="输入学号" required>
             </div>
-            <button type="submit" class="submit-btn">🚀 立即发布</button>
+            <div class="form-row">
+                <label>设置操作密码 *（删除和标记卖出时需要）</label>
+                <input name="password" type="password" placeholder="自己设置一个密码" required>
+            </div>
+            <button type="submit" class="submit-btn">发布出售</button>
         </form>
     </div>
 </div>
@@ -208,7 +222,7 @@
 <div class="modal-overlay" id="buy-modal" onclick="closeOnOverlay(event,'buy-modal')">
     <div class="modal">
         <div class="modal-header">
-            <h2>🔍 发布求购</h2>
+            <h2>发布求购</h2>
             <button class="modal-close" onclick="closeModal('buy-modal')">×</button>
         </div>
         <form action="/add_buy" method="post" class="modal-form">
@@ -222,17 +236,21 @@
             </div>
             <div class="form-row">
                 <label>补充说明</label>
-                <textarea name="description" placeholder="版本、成色要求等..."></textarea>
+                <textarea name="description" placeholder="版本要求、成色要求等..."></textarea>
             </div>
             <div class="form-row">
-                <label>联系方式（微信/QQ）</label>
+                <label>联系方式（微信 / QQ）</label>
                 <input name="contact" placeholder="例：QQ 123456789">
             </div>
             <div class="form-row">
-                <label>学号 *（删除时需要验证）</label>
-                <input name="student_id" placeholder="输入你的学号" required>
+                <label>学号 *</label>
+                <input name="student_id" placeholder="输入学号" required>
             </div>
-            <button type="submit" class="submit-btn">🚀 发布求购</button>
+            <div class="form-row">
+                <label>设置操作密码 *（删除时需要）</label>
+                <input name="password" type="password" placeholder="自己设置一个密码" required>
+            </div>
+            <button type="submit" class="submit-btn">发布求购</button>
         </form>
     </div>
 </div>
@@ -266,27 +284,37 @@ function showSection(type, event) {
 function addView(id) {
     fetch('/view/' + id);
 }
+function copyContact(text, btn) {
+    navigator.clipboard.writeText(text).then(function() {
+        btn.innerText = '已复制';
+        btn.style.background = '#1a3a5c';
+        setTimeout(function() {
+            btn.innerText = '复制';
+            btn.style.background = '';
+        }, 2000);
+    });
+}
 var verifyAction = null;
 function verifyAndDelete(id) {
     verifyAction = {type: 'delete', id: id};
-    document.getElementById('verify-title').innerText = '🔐 验证身份 · 删除';
+    document.getElementById('verify-title').innerText = '身份验证 · 删除';
     document.getElementById('verify-input').value = '';
     document.getElementById('verify-error').style.display = 'none';
     openModal('verify-modal');
 }
 function verifyAndSold(id) {
     verifyAction = {type: 'sold', id: id};
-    document.getElementById('verify-title').innerText = '🔐 验证身份 · 标记卖出';
+    document.getElementById('verify-title').innerText = '身份验证 · 标记卖出';
     document.getElementById('verify-input').value = '';
     document.getElementById('verify-error').style.display = 'none';
     openModal('verify-modal');
 }
 function doVerify() {
-    var studentId = document.getElementById('verify-input').value.trim();
-    if (!studentId) return;
+    var pwd = document.getElementById('verify-input').value.trim();
+    if (!pwd) return;
     var url = '/' + verifyAction.type + '/' + verifyAction.id;
     var form = new FormData();
-    form.append('student_id', studentId);
+    form.append('password', pwd);
     fetch(url, {method: 'POST', body: form})
         .then(function(r) { return r.json(); })
         .then(function(data) {
