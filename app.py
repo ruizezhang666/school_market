@@ -112,6 +112,36 @@ def delete(item_id):
         db.session.commit()
         return jsonify({'success': True})
     return jsonify({'success': False})
+@app.route('/api/items')
+def api_items():
+    keyword = request.args.get('q', '').strip()
+    if keyword:
+        items = Item.query.filter(Item.name.contains(keyword)).all()
+    else:
+        items = Item.query.all()
+    all_items = Item.query.all()
+    sell_count = sum(1 for i in all_items if i.type == "sell" and not i.sold)
+    buy_count = sum(1 for i in all_items if i.type == "buy")
+    sold_count = sum(1 for i in all_items if i.sold)
+    return jsonify({
+        'items': [{
+            'id': i.id,
+            'type': i.type,
+            'name': i.name,
+            'price': i.price,
+            'img': i.img or '',
+            'student_id': i.student_id,
+            'contact': i.contact or '',
+            'category': i.category or '',
+            'description': i.description or '',
+            'sold': i.sold,
+            'time': i.time or '',
+            'views': i.views or 0
+        } for i in items],
+        'sell_count': sell_count,
+        'buy_count': buy_count,
+        'sold_count': sold_count
+    })
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)
